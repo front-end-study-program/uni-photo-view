@@ -1,0 +1,20 @@
+.uni-page-head {
+  display: none;
+}
+
+uni-page-head {
+  display: none;
+}
+
+uni-page-wrapper {
+  height: 100% !important;
+}
+
+uni-page-body {
+  height: 100%;
+}
+
+input {
+  padding: 4px 2px;
+  border: 1px solid black;
+}
