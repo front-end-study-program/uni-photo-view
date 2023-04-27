@@ -24,7 +24,7 @@
 import { reactive } from 'vue'
 import ImageView from '@/components/ImageView.vue'
 import ImagePreview from '@/components/ImagePreview.vue'
-import image1 from '@/static/1.jpg'
+import image1 from '@/static/5.jpg'
 
 const state = reactive({
   images: [image1],

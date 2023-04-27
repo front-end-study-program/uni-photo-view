@@ -2,18 +2,23 @@
   <view
     class="PhotoView__PhotoWrap"
     @touchstart="(e) => handleMaskStart(e.touches[0])"
+    @touchmove="onTouchmove"
     @touchend="onTouchend"
   >
     <view
       class="PhotoView__PhotoBox"
       :style="{
-        transform: `matrix()`,
+        transform: `matrix(${currentScale}, 0, 0, ${currentScale}, ${translateX}, ${translateY})`,
         transition: state.touched || state.pause ? undefined : transitionCSS,
         willChange: 'transform'
       }"
     >
       <view @touchstart="handleTouchStart">
         <img
+          :style="{
+            width: currentWidth + 'px',
+            height: currentHeight + 'px',
+          }"
           class="PhotoView__Photo"
           :src="src"
           @load="handleImageLoaded"
@@ -27,6 +32,10 @@
 import { reactive, ref } from 'vue'
 import getSuitableImageSize from './utils/getSuitableImageSize'
 import getMultipleTouchPosition from './utils/getMultipleTouchPosition'
+import useAnimationPosition from './hooks/useAnimationPosition'
+import { minStartTouchOffset } from './variables'
+import { computePositionEdge, getReachType } from './utils/edgeHandle'
+import getPositionOnMoveOrScale from './utils/getPositionOnMoveOrScale'
 
 const props = defineProps({
   src: {
@@ -50,6 +59,10 @@ const state = reactive({
   naturalWidth: undefined,
   // 真实高度
   naturalHeight: undefined,
+  // 宽度
+  width: undefined,
+  // 高度
+  height: undefined,
   // 加载成功状态
   loaded: undefined,
 
@@ -87,7 +100,9 @@ const state = reactive({
   // 多指触控间距
   touchLength: 0,
   // 是否暂停 transition
-  pause: true
+  pause: true,
+  // 当前边缘触发状态
+  reach: undefined
 })
 const initialTouchRef = ref(0)
 
@@ -100,6 +115,59 @@ function handleMaskStart (e) {
   state.CY = e.clientY
   state.lastX = state.x
   state.lastY = state.y
+}
+
+const handleMove = (nextClientX, nextClientY, currentTouchLength) => {
+  const { touched, maskTouched, CX, CY, lastCX, lastCY, lastX, lastY, scale, reach, x, y, width, height } = state
+  if (touched || maskTouched) {
+    // 单指最小缩放下，以初始移动距离来判断意图
+    if (currentTouchLength === 0 && initialTouchRef.value === 0) {
+      const isStillX = Math.abs(nextClientX - CX) <= minStartTouchOffset
+      const isStillY = Math.abs(nextClientY - CY) <= minStartTouchOffset
+      // 初始移动距离不足
+      if (isStillX && isStillY) {
+        // 方向记录上次移动距离，以便平滑过渡
+        state.lastCX = nextClientX
+        state.lastCY = nextClientY
+        return
+      }
+      // 设置响应状态
+      initialTouchRef.value = !isStillX ? 1 : nextClientY > CY ? 3 : 2
+      const offsetX = nextClientX - lastCX
+      const offsetY = nextClientY - lastCY
+      // 边缘触发状态
+      let currentReach
+      if (currentTouchLength === 0) {
+        // 边缘超出状态
+        const [horizontalCloseEdge] = computePositionEdge(offsetX + lastX, scale, currentWidth, innerWidth)
+        const [verticalCloseEdge] = computePositionEdge(offsetY + lastY, scale, currentHeight, innerHeight)
+        // 边缘触发检测
+        currentReach = getReachType(initialTouchRef.value.current, horizontalCloseEdge, verticalCloseEdge, reach)
+
+        // 接触边缘
+        if (currentReach !== undefined) {
+          // onReachMove(currentReach, nextClientX, nextClientY, scale)
+        }
+      }
+      // 横向边缘触发、背景触发禁用当前滑动
+      if (currentReach === 'x' || maskTouched) {
+        state.reach = 'x'
+        return
+      }
+
+      Object.assign(state, {
+        touchLength: currentTouchLength,
+        reach: currentReach,
+        ...getPositionOnMoveOrScale(x, y, width, height, scale, scale, nextClientX, nextClientY, offsetX, offsetY)
+      })
+    }
+  }
+}
+
+function onTouchmove (e) {
+  e.preventDefault()
+  const position = getMultipleTouchPosition(e)
+  handleMove(...position)
 }
 
 function onTouchend ({ changedTouches }) {
@@ -146,6 +214,9 @@ function handleStart (currentClientX, currentClientY, currentTouchLength = 0) {
   state.touchLength = currentTouchLength
   state.touchTime = Date.now()
 }
+
+// 计算位置
+const [translateX, translateY, currentWidth, currentHeight, currentScale] = useAnimationPosition(state)
 
 // img
 
