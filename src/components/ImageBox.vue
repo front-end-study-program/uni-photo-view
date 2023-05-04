@@ -124,6 +124,7 @@ const handleMove = (nextClientX, nextClientY, currentTouchLength) => {
     if (currentTouchLength === 0 && initialTouchRef.value === 0) {
       const isStillX = Math.abs(nextClientX - CX) <= minStartTouchOffset
       const isStillY = Math.abs(nextClientY - CY) <= minStartTouchOffset
+      console.log(isStillX, isStillY)
       // 初始移动距离不足
       if (isStillX && isStillY) {
         // 方向记录上次移动距离，以便平滑过渡
@@ -133,34 +134,33 @@ const handleMove = (nextClientX, nextClientY, currentTouchLength) => {
       }
       // 设置响应状态
       initialTouchRef.value = !isStillX ? 1 : nextClientY > CY ? 3 : 2
-      const offsetX = nextClientX - lastCX
-      const offsetY = nextClientY - lastCY
-      // 边缘触发状态
-      let currentReach
-      if (currentTouchLength === 0) {
-        // 边缘超出状态
-        const [horizontalCloseEdge] = computePositionEdge(offsetX + lastX, scale, currentWidth, innerWidth)
-        const [verticalCloseEdge] = computePositionEdge(offsetY + lastY, scale, currentHeight, innerHeight)
-        // 边缘触发检测
-        currentReach = getReachType(initialTouchRef.value.current, horizontalCloseEdge, verticalCloseEdge, reach)
-
-        // 接触边缘
-        if (currentReach !== undefined) {
-          // onReachMove(currentReach, nextClientX, nextClientY, scale)
-        }
-      }
-      // 横向边缘触发、背景触发禁用当前滑动
-      if (currentReach === 'x' || maskTouched) {
-        state.reach = 'x'
-        return
-      }
-
-      Object.assign(state, {
-        touchLength: currentTouchLength,
-        reach: currentReach,
-        ...getPositionOnMoveOrScale(x, y, width, height, scale, scale, nextClientX, nextClientY, offsetX, offsetY)
-      })
     }
+    const offsetX = nextClientX - lastCX
+    const offsetY = nextClientY - lastCY
+    // 边缘触发状态
+    let currentReach
+    if (currentTouchLength === 0) {
+      // 边缘超出状态
+      const [horizontalCloseEdge] = computePositionEdge(offsetX + lastX, scale, currentWidth.value, innerWidth)
+      const [verticalCloseEdge] = computePositionEdge(offsetY + lastY, scale, currentHeight.value, innerHeight)
+      // 边缘触发检测
+      currentReach = getReachType(initialTouchRef.value, horizontalCloseEdge, verticalCloseEdge, reach)
+
+      // 接触边缘
+      if (currentReach !== undefined) {
+        // onReachMove(currentReach, nextClientX, nextClientY, scale)
+      }
+    }
+    // 横向边缘触发、背景触发禁用当前滑动
+    if (currentReach === 'x' || maskTouched) {
+      state.reach = 'x'
+      return
+    }
+    Object.assign(state, {
+      touchLength: currentTouchLength,
+      reach: currentReach,
+      ...getPositionOnMoveOrScale(x, y, width, height, scale, scale, nextClientX, nextClientY, offsetX, offsetY)
+    })
   }
 }
 
