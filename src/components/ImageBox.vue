@@ -59,7 +59,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['maskTap', 'expose', 'onReachUp', 'onPhotoTap'])
+const emit = defineEmits(['maskTap', 'expose', 'onReachUp', 'onPhotoTap', 'onReachMove'])
 
 const state = reactive({
   // 真实宽度
@@ -172,7 +172,7 @@ const handleMove = (nextClientX, nextClientY, currentTouchLength) => {
 
       // 接触边缘
       if (currentReach !== undefined) {
-        // onReachMove(currentReach, nextClientX, nextClientY, scale)
+        emit('onReachMove', currentReach, nextClientX, nextClientY, scale)
       }
     }
     // 横向边缘触发、背景触发禁用当前滑动
