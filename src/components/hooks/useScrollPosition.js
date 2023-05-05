@@ -47,7 +47,6 @@ export default function useScrollPosition (
       const { x: nextX, y: nextY } = getPositionOnMoveOrScale(x, y, width, height, scale, safeScale)
       const targetX = beginEdgeX ? beginX : nextX !== x ? nextX : null
       const targetY = beginEdgeY ? beginY : nextY !== y ? nextY : null
-
       if (targetX !== null) {
         easeOutMove(x, targetX, callbackX)
       }

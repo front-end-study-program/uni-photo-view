@@ -208,6 +208,7 @@ function updateRaf (position) {
     ...position,
     pause: props.visible
   })
+  return true
 }
 
 const slideToPosition = useScrollPosition(
