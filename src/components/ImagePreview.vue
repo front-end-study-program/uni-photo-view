@@ -27,16 +27,20 @@
         :src="src"
         :speed="currentSpeed"
         :easing="currentEasing"
+        :visible="visible"
         @mask-tap="handlePhotoTap"
+        @expose="updateState"
+        @on-reach-up="handleReachUp"
+        @on-photo-tap="handlePhotoTap"
       />
     </view>
   </view>
 </template>
 
 <script setup>
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import useAnimationVisible from './hooks/useAnimationVisible'
-import { defaultOpacity, defaultEasing, defaultSpeed } from './variables'
+import { defaultOpacity, defaultEasing, defaultSpeed, horizontalOffset } from './variables'
 import ImageBox from './ImageBox.vue'
 
 const props = defineProps({
@@ -57,11 +61,24 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const state = reactive({
-  bg: defaultOpacity,
+  x: 0,
+  touched: false,
+  pause: false,
+  lastCX: undefined,
+  lastCY: undefined,
+  bg: undefined,
   lastBg: undefined,
-
-  touched: false
+  overlay: true,
+  minimal: true,
+  scale: 1,
+  rotate: 0
 })
+// 内部虚拟 index
+const virtualIndexRef = ref(props.index)
+
+function updateState (payload) {
+  Object.assign(state, payload)
+}
 
 const src = computed(() => props.images[props.index])
 
@@ -86,6 +103,33 @@ function handlePhotoTap () {
 function close () {
   state.lastBg = state.bg
   emit('close')
+}
+
+function handleReachUp (clientX, clientY) {
+  const offsetClientX = clientX - (state.lastCX ?? clientX)
+  const offsetClientY = clientY - (state.lastCY ?? clientY)
+  let willClose = false
+  // 下一张
+
+  // 上一张
+
+  const singlePageWidth = innerWidth + horizontalOffset
+
+  // 当前偏移
+  const currentTranslateX = -singlePageWidth * virtualIndexRef.value
+  if (Math.abs(offsetClientY) > 100 && state.minimal) {
+    willClose = true
+    close()
+  }
+
+  updateState({
+    touched: false,
+    x: currentTranslateX,
+    lastCX: undefined,
+    lastCY: undefined,
+    bg: defaultOpacity,
+    overlay: willClose ? true : state.overlay
+  })
 }
 
 </script>

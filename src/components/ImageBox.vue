@@ -36,6 +36,9 @@ import useAnimationPosition from './hooks/useAnimationPosition'
 import { minStartTouchOffset } from './variables'
 import { computePositionEdge, getReachType } from './utils/edgeHandle'
 import getPositionOnMoveOrScale from './utils/getPositionOnMoveOrScale'
+import { limitScale } from './utils/limitTarget'
+import useScrollPosition from './hooks/useScrollPosition'
+import useContinuousTap from './hooks/useContinuousTap'
 
 const props = defineProps({
   src: {
@@ -49,10 +52,14 @@ const props = defineProps({
   easing: {
     type: String,
     default: ''
+  },
+  visible: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['maskTap'])
+const emit = defineEmits(['maskTap', 'expose', 'onReachUp', 'onPhotoTap'])
 
 const state = reactive({
   // 真实宽度
@@ -101,6 +108,8 @@ const state = reactive({
   touchLength: 0,
   // 是否暂停 transition
   pause: true,
+  // 停止 Raf
+  stopRaf: true,
   // 当前边缘触发状态
   reach: undefined
 })
@@ -115,6 +124,21 @@ function handleMaskStart (e) {
   state.CY = e.clientY
   state.lastX = state.x
   state.lastY = state.y
+}
+
+// 默认为屏幕中心缩放
+function onScale (current, clientX, clientY) {
+  if (state.scale !== current) {
+    emit('expose', {
+      scale: current
+    })
+
+    Object.assign(state, {
+      scale: current,
+      ...getPositionOnMoveOrScale(state.x, state.y, state.width, state.height, state.scale, current, clientX, clientY),
+      ...(current <= 1 && { x: 0, y: 0 })
+    })
+  }
 }
 
 const handleMove = (nextClientX, nextClientY, currentTouchLength) => {
@@ -175,15 +199,56 @@ function onTouchend ({ changedTouches }) {
   handleUp(touch.clientX, touch.clientY)
 }
 
+function updateRaf (position) {
+  if (state.stopRaf || state.touched) {
+    return false
+  }
+  // 下拉关闭时可以有动画
+  Object.assign(state, {
+    ...position,
+    pause: props.visible
+  })
+}
+
+const slideToPosition = useScrollPosition(
+  (nextX) => updateRaf({ x: nextX }),
+  (nextY) => updateRaf({ y: nextY }),
+  (nextScale) => {
+    emit('expose', { scale: nextScale })
+    state.scale = nextScale
+    return !state.touched
+  }
+)
+
+const handlePhotoTap = useContinuousTap(() => emit('onPhotoTap'), (currentClientX, currentClientY) => {
+  if (!state.reach) {
+    // 若图片足够大，则放大适应的倍数
+    const endScale = state.scale !== 1 ? 1 : Math.max(2, state.naturalWidth / state.width)
+    onScale(endScale, currentClientX, currentClientY)
+  }
+})
+
 function handleUp (nextClientX, nextClientY) {
   // 重置响应状态
   initialTouchRef.value = 0
-  const { touched, maskTouched, CX, CY } = state
+  const { touched, maskTouched, CX, CY, scale, naturalWidth, width, x, y, lastX, lastY, height, lastScale, rotate, touchTime } = state
   if (touched || maskTouched) {
     state.touched = false
     state.maskTouched = false
+    state.pause = false
+    state.stopRaf = false
+    state.reach = undefined
+    const safeScale = limitScale(scale, naturalWidth / width)
+
+    slideToPosition(x, y, lastX, lastY, width, height, scale, safeScale, lastScale, rotate, touchTime)
+
+    emit('onReachUp', nextClientX, nextClientY)
     // 触发 Tap 事件
     if (CX === nextClientX && CY === nextClientY) {
+      if (touched) {
+        handlePhotoTap(nextClientX, nextClientY)
+        return
+      }
       if (maskTouched) {
         emit('maskTap', nextClientX, nextClientY)
       }
