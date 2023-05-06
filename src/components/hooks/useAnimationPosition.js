@@ -1,8 +1,8 @@
 import { computed } from 'vue'
-export default function useAnimationPosition (state) {
-  const autoWidth = computed(() => state.width * state.scale)
+import useTargetScale from './useTargetScale'
 
-  const autoHeight = computed(() => state.height * state.scale)
+export default function useAnimationPosition (state, speed) {
+  const { autoWidth, autoHeight, autoScale } = useTargetScale(state, speed)
 
   // 偏移量，x: 0, y: 0 居中为初始
   const centerWidth = innerWidth / 2
@@ -21,6 +21,6 @@ export default function useAnimationPosition (state) {
     translateY,
     autoWidth,
     autoHeight,
-    state.scale
+    autoScale
   ]
 }

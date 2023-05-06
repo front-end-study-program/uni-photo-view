@@ -33,7 +33,6 @@ const state = reactive({
 })
 
 function show (uniqueId) {
-  console.log(uniqueId)
   state.index = uniqueId
   state.visible = true
 }

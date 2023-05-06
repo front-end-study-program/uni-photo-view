@@ -118,7 +118,6 @@ const initialTouchRef = ref(0)
 const transitionCSS = `transform ${props.speed}ms ${props.easing}`
 
 function handleMaskStart (e) {
-  console.log(e)
   state.maskTouched = true
   state.CX = e.clientX
   state.CY = e.clientY
@@ -132,10 +131,10 @@ function onScale (current, clientX, clientY) {
     emit('expose', {
       scale: current
     })
-
+    const { x, y, width, height, scale } = state
     Object.assign(state, {
       scale: current,
-      ...getPositionOnMoveOrScale(state.x, state.y, state.width, state.height, state.scale, current, clientX, clientY),
+      ...getPositionOnMoveOrScale(x, y, width, height, scale, current, clientX, clientY),
       ...(current <= 1 && { x: 0, y: 0 })
     })
   }
@@ -148,7 +147,6 @@ const handleMove = (nextClientX, nextClientY, currentTouchLength) => {
     if (currentTouchLength === 0 && initialTouchRef.value === 0) {
       const isStillX = Math.abs(nextClientX - CX) <= minStartTouchOffset
       const isStillY = Math.abs(nextClientY - CY) <= minStartTouchOffset
-      console.log(isStillX, isStillY)
       // 初始移动距离不足
       if (isStillX && isStillY) {
         // 方向记录上次移动距离，以便平滑过渡
@@ -282,7 +280,7 @@ function handleStart (currentClientX, currentClientY, currentTouchLength = 0) {
 }
 
 // 计算位置
-const [translateX, translateY, currentWidth, currentHeight, currentScale] = useAnimationPosition(state)
+const [translateX, translateY, currentWidth, currentHeight, currentScale] = useAnimationPosition(state, props.speed)
 
 // img
 
@@ -307,6 +305,10 @@ function handleImageLoaded (e) {
   width: 100%;
   touch-action: none;
   direction: ltr;
+}
+
+.PhotoView__PhotoBox {
+  transform-origin: left top;
 }
 
 .PhotoView__Photo {
