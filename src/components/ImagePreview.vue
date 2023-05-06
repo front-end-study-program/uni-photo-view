@@ -167,8 +167,8 @@ function handleReachMove (reachPosition, clientX, clientY, nextScale) {
 }
 
 function handleReachUp (clientX, clientY) {
-  const offsetClientX = clientX - (state.lastCX ?? clientX)
-  const offsetClientY = clientY - (state.lastCY ?? clientY)
+  const offsetClientX = clientX - (state.lastCX === null || state.lastCX === undefined ? clientX : state.lastCX)
+  const offsetClientY = clientY - (state.lastCY === null || state.lastCY === undefined ? clientY : state.lastCY)
   let willClose = false
   // 下一张
 

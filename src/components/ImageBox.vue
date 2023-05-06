@@ -13,7 +13,9 @@
         willChange: 'transform'
       }"
     >
-      <view @touchstart="handleTouchStart">
+      <view
+        @touchstart="handleTouchStart"
+      >
         <img
           :style="{
             width: currentWidth + 'px',
@@ -33,12 +35,13 @@ import { reactive, ref } from 'vue'
 import getSuitableImageSize from './utils/getSuitableImageSize'
 import getMultipleTouchPosition from './utils/getMultipleTouchPosition'
 import useAnimationPosition from './hooks/useAnimationPosition'
-import { minStartTouchOffset } from './variables'
+import { minStartTouchOffset, scaleBuffer } from './variables'
 import { computePositionEdge, getReachType } from './utils/edgeHandle'
 import getPositionOnMoveOrScale from './utils/getPositionOnMoveOrScale'
 import { limitScale } from './utils/limitTarget'
 import useScrollPosition from './hooks/useScrollPosition'
 import useContinuousTap from './hooks/useContinuousTap'
+import useDebounceCallback from './hooks/useDebounceCallback'
 
 const props = defineProps({
   src: {
@@ -140,8 +143,8 @@ function onScale (current, clientX, clientY) {
   }
 }
 
-const handleMove = (nextClientX, nextClientY, currentTouchLength) => {
-  const { touched, maskTouched, CX, CY, lastCX, lastCY, lastX, lastY, scale, reach, x, y, width, height } = state
+const handleMove = useDebounceCallback((nextClientX, nextClientY, currentTouchLength) => {
+  const { touched, maskTouched, CX, CY, lastCX, lastCY, lastX, lastY, scale, reach, x, y, width, height, naturalWidth, touchLength } = state
   if (touched || maskTouched) {
     // 单指最小缩放下，以初始移动距离来判断意图
     if (currentTouchLength === 0 && initialTouchRef.value === 0) {
@@ -178,13 +181,25 @@ const handleMove = (nextClientX, nextClientY, currentTouchLength) => {
       state.reach = 'x'
       return
     }
+
+    // 目标倍数
+    const toScale = limitScale(
+      scale + ((currentTouchLength - touchLength) / 100 / 2) * scale,
+      naturalWidth / width,
+      scaleBuffer
+    )
+
+    // 导出变量
+    emit('expose', { scale: toScale })
+
     Object.assign(state, {
       touchLength: currentTouchLength,
       reach: currentReach,
+      scale: toScale,
       ...getPositionOnMoveOrScale(x, y, width, height, scale, scale, nextClientX, nextClientY, offsetX, offsetY)
     })
   }
-}
+}, { maxWait: 8 })
 
 function onTouchmove (e) {
   e.preventDefault()
